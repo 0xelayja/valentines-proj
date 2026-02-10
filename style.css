@@ -1,4 +1,10 @@
+/* style.css */
+
+/* ✅ PUT YOUR IMAGES HERE */
 :root{
+  --img-1: url("images/first.jpg");   /* <- replace with your first image path */
+  --img-2: url("images/second.jpg");  /* <- replace with your second image path */
+
   --pink-1:#ffe4f0;
   --pink-2:#ffc6df;
   --pink-3:#ffb6d9;
@@ -74,9 +80,13 @@ body{
     inset 0 0 0 4px rgba(255,255,255,.55);
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
+
+  /* ✅ FIRST IMAGE (default state) */
   background-image:
     linear-gradient(135deg, rgba(255,79,162,.15), rgba(255,255,255,.1)),
-    url("https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=1200&q=80");
+    var(--img-1);
+
   position:relative;
 }
 
@@ -127,9 +137,7 @@ body{
   user-select:none;
 }
 
-.btn:active{
-  transform: translateY(0);
-}
+.btn:active{ transform: translateY(0); }
 
 .btn.yes{
   background: linear-gradient(180deg, var(--pink-3), var(--pink-4));
@@ -138,35 +146,31 @@ body{
     0 10px 20px rgba(255, 143, 198, 0.35),
     inset 0 2px 0 rgba(255,255,255,0.6);
 }
-
 .btn.yes:hover{
   transform: translateY(-2px);
-  box-shadow:
-    0 14px 26px rgba(255, 143, 198, 0.45);
+  box-shadow: 0 14px 26px rgba(255, 143, 198, 0.45);
 }
 
 .btn.no{
   background: #fff;
   color: #a45a7f;
   border: 1.5px solid #ffd2e8;
-  box-shadow:
-    0 8px 16px rgba(255, 182, 217, 0.25);
+  box-shadow: 0 8px 16px rgba(255, 182, 217, 0.25);
 }
+.btn.no:hover{ background: #fff6fb; }
 
-.btn.no:hover{
-  background: #fff6fb;
-}
-
-/* Floating No button that roams anywhere */
-.no-float{
+/* ✅ Ultra-smooth floating "No" button */
+.btn.no.no-float{
   position: fixed;
-  left: 70vw;
-  top: 65vh;
+  left: 0;
+  top: 0;
   z-index: 9999;
   will-change: transform;
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
 }
-
-.no-float.is-moving{
+.btn.no.no-float.is-moving{
   filter: drop-shadow(0 14px 24px rgba(255, 143, 198, 0.28));
 }
 
@@ -179,10 +183,5 @@ body{
 }
 
 /* Success state */
-.card.success .buttons{
-  display:none;
-}
-
-.card.success .title{
-  color: #a51f57;
-}
+.card.success .buttons{ display:none; }
+.card.success .title{ color: #a51f57; }
