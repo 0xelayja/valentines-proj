@@ -262,7 +262,7 @@ yesBtn.addEventListener("click", (e) => {
   `;
 
   title.textContent = "I knew you’d say yes ❤️";
-  subtitle.textContent = "You just made my day 💕";
+  subtitle.textContent = "Now come here… I owe you a sweet hug 💕";
 
   noBtn.style.display = "none";
   stopMotionLoop();
