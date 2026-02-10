@@ -11,13 +11,12 @@ const subtitle = document.getElementById("subtitle");
 let noIsFloating = false;
 
 // ---------- Smooth motion (spring physics) ----------
-let x = 0, y = 0;          // current position
-let tx = 0, ty = 0;        // target position
-let vx = 0, vy = 0;        // velocity
+let x = 0, y = 0;
+let tx = 0, ty = 0;
+let vx = 0, vy = 0;
 let rafId = null;
 let lastT = 0;
 
-// ✅ track cursor (so we can “panic escape” even if mouse isn't on button yet)
 let mouseX = window.innerWidth / 2;
 let mouseY = window.innerHeight / 2;
 
@@ -28,24 +27,33 @@ window.addEventListener("mousemove", (e) => {
 
 const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
-// Tweak feel
 const SPRING = 0.022;
 const DAMPING = 0.86;
 const MAX_SPEED = 60;
 
-// ✅ important: keep margin so corners can’t trap it
-const SAFE_MARGIN = 28;      // distance from edges
-const CORNER_GUARD = 120;    // avoids targets too close to corners
-const PANIC_DIST = 120;      // if cursor is this close while near edges => force a new target
+const SAFE_MARGIN = 28;
+const CORNER_GUARD = 120;
+const PANIC_DIST = 120;
 
 const rand = (min, max) => Math.random() * (max - min) + min;
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+
+// ✅ Mobile tap-through guard
+let yesCooldownUntil = 0;
+function blockTapThrough(ms = 260) {
+  // Disable clicks briefly so a tap doesn't "fall through" to Yes.
+  buttons.style.pointerEvents = "none";
+  yesCooldownUntil = Date.now() + ms;
+
+  window.clearTimeout(blockTapThrough._t);
+  blockTapThrough._t = window.setTimeout(() => {
+    buttons.style.pointerEvents = "";
+  }, ms);
+}
 
 function getBtnSize() {
   const r = noBtn.getBoundingClientRect();
-  return {
-    w: r.width || 120,
-    h: r.height || 44
-  };
+  return { w: r.width || 120, h: r.height || 44 };
 }
 
 function bounds() {
@@ -57,17 +65,10 @@ function bounds() {
   return { minX, minY, maxX: Math.max(minX, maxX), maxY: Math.max(minY, maxY), w, h };
 }
 
-function clamp(v, a, b) { return Math.min(Math.max(v, a), b); }
-
 function isNearEdge(px, py) {
   const { minX, minY, maxX, maxY } = bounds();
   const edgePad = 14;
-  return (
-    px <= minX + edgePad ||
-    py <= minY + edgePad ||
-    px >= maxX - edgePad ||
-    py >= maxY - edgePad
-  );
+  return (px <= minX + edgePad || py <= minY + edgePad || px >= maxX - edgePad || py >= maxY - edgePad);
 }
 
 function isNearCorner(px, py) {
@@ -94,7 +95,6 @@ function startMotionLoop() {
     lastT = t;
     const s = dt / 16.67;
 
-    // spring acceleration
     let ax = (tx - x) * SPRING * s;
     let ay = (ty - y) * SPRING * s;
 
@@ -107,27 +107,25 @@ function startMotionLoop() {
     x += vx * s;
     y += vy * s;
 
-    // ✅ bounce off walls instead of sticking
     const { minX, minY, maxX, maxY } = bounds();
 
+    // bounce
     if (x <= minX) { x = minX; vx = Math.abs(vx) + 6; }
     if (x >= maxX) { x = maxX; vx = -Math.abs(vx) - 6; }
     if (y <= minY) { y = minY; vy = Math.abs(vy) + 6; }
     if (y >= maxY) { y = maxY; vy = -Math.abs(vy) - 6; }
 
-    // ✅ if target is outside safe area, clamp target too
+    // clamp target
     tx = clamp(tx, minX, maxX);
     ty = clamp(ty, minY, maxY);
 
-    // ✅ panic escape: if cursor is close and we're near edges, push target inward
+    // panic escape if near edges and cursor close
     if (isNearEdge(x, y)) {
       const { w, h } = bounds();
       const cx = x + w / 2;
       const cy = y + h / 2;
       const d = Math.hypot(cx - mouseX, cy - mouseY);
-
       if (d < PANIC_DIST) {
-        // aim toward center-ish
         tx = clamp(tx + (cx - mouseX) * 1.4 + rand(-80, 80), minX, maxX);
         ty = clamp(ty + (cy - mouseY) * 1.4 + rand(-60, 60), minY, maxY);
         vx += (tx - x) * SPRING * 8;
@@ -155,14 +153,10 @@ function makeNoFloatAtCurrentPosition() {
   document.body.appendChild(noBtn);
   noBtn.classList.add("no-float");
 
-  x = r.left;
-  y = r.top;
-  tx = x;
-  ty = y;
-  vx = 0;
-  vy = 0;
+  x = r.left; y = r.top;
+  tx = x; ty = y;
+  vx = 0; vy = 0;
 
-  // clamp inside safe area immediately
   const { minX, minY, maxX, maxY } = bounds();
   x = clamp(x, minX, maxX);
   y = clamp(y, minY, maxY);
@@ -172,20 +166,17 @@ function makeNoFloatAtCurrentPosition() {
   startMotionLoop();
 }
 
-// ✅ pick targets that avoid corners and stay safely inside
 function pickSafeTargetAwayFrom(cursorX, cursorY) {
   const { minX, minY, maxX, maxY, w, h } = bounds();
 
   const bx = x + w / 2;
   const by = y + h / 2;
 
-  // direction away from cursor
   let dx = bx - cursorX;
   let dy = by - cursorY;
   const len = Math.hypot(dx, dy) || 1;
   dx /= len; dy /= len;
 
-  // push more when closer
   const dist = Math.max(1, Math.hypot(bx - cursorX, by - cursorY));
   const push = Math.min(560, Math.max(260, 760 - dist));
 
@@ -195,7 +186,6 @@ function pickSafeTargetAwayFrom(cursorX, cursorY) {
   bestX = clamp(bestX, minX, maxX);
   bestY = clamp(bestY, minY, maxY);
 
-  // If target would land near a corner, reroll a few times
   for (let i = 0; i < 10 && isNearCorner(bestX, bestY); i++) {
     bestX = clamp(rand(minX, maxX), minX, maxX);
     bestY = clamp(rand(minY, maxY), minY, maxY);
@@ -212,6 +202,9 @@ function escape(e) {
   const cx = e?.clientX ?? mouseX ?? window.innerWidth / 2;
   const cy = e?.clientY ?? mouseY ?? window.innerHeight / 2;
 
+  // ✅ stop mobile tap-through immediately
+  blockTapThrough(280);
+
   if (prefersReduced) {
     const [nx, ny] = pickSafeTargetAwayFrom(cx, cy);
     x = tx = nx;
@@ -226,25 +219,41 @@ function escape(e) {
   tx = nx;
   ty = ny;
 
-  // add impulse
   vx += (tx - x) * SPRING * 10;
   vy += (ty - y) * SPRING * 10;
 
   setTimeout(() => noBtn.classList.remove("is-moving"), 220);
 }
 
-// Events (keep same)
+// ✅ Desktop events
 noBtn.addEventListener("mouseenter", escape);
 noBtn.addEventListener("mousemove", escape);
 noBtn.addEventListener("pointerenter", escape);
 noBtn.addEventListener("pointermove", escape);
+
+// ✅ Mobile: prevent the tap from becoming a click + prevent bubbling
 noBtn.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
   const t = e.touches?.[0];
   escape(t ? { clientX: t.clientX, clientY: t.clientY } : null);
-}, { passive: true });
+}, { passive: false });
 
-// Yes button (keep same)
-yesBtn.addEventListener("click", () => {
+noBtn.addEventListener("click", (e) => {
+  // extra safety: never allow "No" to trigger click actions
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+// ✅ Yes button: block accidental tap within the cooldown window
+yesBtn.addEventListener("click", (e) => {
+  if (Date.now() < yesCooldownUntil) {
+    e.preventDefault();
+    e.stopPropagation();
+    return; // ignore accidental click
+  }
+
   card.classList.add("success");
 
   imageBox.style.backgroundImage = `
@@ -252,8 +261,8 @@ yesBtn.addEventListener("click", () => {
     var(--img-2)
   `;
 
-  title.textContent = "I knew you'd say yes ❤️";
-  subtitle.textContent = "Now come here… I owe you a sweet hug 💕";
+  title.textContent = "I knew you’d say yes ❤️";
+  subtitle.textContent = "You just made my day 💕";
 
   noBtn.style.display = "none";
   stopMotionLoop();
