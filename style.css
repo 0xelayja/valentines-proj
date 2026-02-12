@@ -2,7 +2,7 @@
 
 /* ✅ PUT YOUR IMAGES HERE */
 :root{
-  --img-1: url("images/first1.jpg");   /* <- replace with your first image path */
+  --img-1: url("images/firstimage.jpg");   /* <- replace with your first image path */
   --img-2: url("images/second.jpg");  /* <- replace with your second image path */
 
   --pink-1:#ffe4f0;
